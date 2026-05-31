@@ -9,9 +9,9 @@ Fixeth is a curated LMS that structures existing tech education into job-ready c
 ## Tech Stack
 
 - **Frontend:** Next.js 14 (App Router), TypeScript, Tailwind CSS, shadcn/ui
-- **Backend:** Next.js API Routes, Node.js + Express
+- **Backend:** Next.js 14 API routes (TypeScript) — backend logic lives in `app/api/`
 - **Auth:** NextAuth.js v5
-- **Databases:** MongoDB Atlas, PostgreSQL (Supabase), Redis (Upstash)
+- **Databases:** PostgreSQL (Supabase) — single source of truth
 - **Payments:** Stripe, SSLCommerz, bKash
 - **Services:** Judge0 (code execution), OpenAI Whisper (transcription), Resend (email), Cloudflare
 
@@ -20,9 +20,7 @@ Fixeth is a curated LMS that structures existing tech education into job-ready c
 ### Prerequisites
 
 - Node.js >= 18
-- MongoDB Atlas cluster
 - Supabase project (PostgreSQL)
-- Upstash Redis instance
 
 ### Installation
 
@@ -34,7 +32,7 @@ npm install
 
 ### Environment Variables
 
-Create a `.env.local` file in the root:
+Create a `.env.local` file in the root (template):
 
 ```env
 # Auth
@@ -50,10 +48,7 @@ LINKEDIN_CLIENT_ID=
 LINKEDIN_CLIENT_SECRET=
 
 # Databases
-MONGODB_URI=
 DATABASE_URL=
-UPSTASH_REDIS_REST_URL=
-UPSTASH_REDIS_REST_TOKEN=
 
 # Payments
 STRIPE_SECRET_KEY=
@@ -68,7 +63,7 @@ YOUTUBE_API_KEY=
 JUDGE0_API_URL=
 
 # App
-NEXT_PUBLIC_APP_URL=http://localhost:3000
+NEXT_PUBLIC_APP_URL=https://fixeth.vercel.app
 ```
 
 ### Run Development Server
@@ -91,7 +86,7 @@ npm run dev
 
 ```
 fixeth/
-├── app/                    # Next.js App Router
+├── app/                    # Next.js App Router (backend API routes live under app/api/)
 │   ├── (auth)/             # Login, signup, onboarding
 │   ├── (dashboard)/        # Post-login pages
 │   ├── tracks/             # Track and lesson pages

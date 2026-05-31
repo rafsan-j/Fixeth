@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { fetchUserCertificates, UserCertificate } from "@/lib/supabase/queries/certificates";
 
 interface Certificate {
   id: string;
@@ -10,9 +11,10 @@ interface Certificate {
   track: string;
   trackBn: string;
   score: number;
+  earned?: boolean;
 }
 
-export default function CertificatesScreen({ T, t, lang, user }: { T: any; t: any; lang: string; user?: { name: string } }) {
+export default function CertificatesScreen({ T, t, lang, user }: { T: any; t: any; lang: string; user?: { id?: string; name?: string } }) {
   const [activeTab, setActiveTab] = useState<"certs" | "verify">("certs");
   const [selectedCert, setSelectedCert] = useState<Certificate | null>(null);
 
@@ -25,26 +27,40 @@ export default function CertificatesScreen({ T, t, lang, user }: { T: any; t: an
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  const certData: Certificate[] = [
-    {
-      id: "SH-2026-A4F7B2",
-      name: "Python Foundations",
-      nameBn: "পাইথন ফাউন্ডেশনস",
-      date: "2026-04-12",
-      track: "Data Science & AI",
-      trackBn: "ডেটা সায়েন্স ও এআই",
-      score: 92
-    },
-    {
-      id: "SH-2026-7C19E3",
-      name: "Bengali Digital Literacy",
-      nameBn: "বাংলা ডিজিটাল লিটারেসি",
-      date: "2026-03-02",
-      track: "Digital Literacy Pro",
-      trackBn: "ডিজিটাল লিটারেসি প্রো",
-      score: 88
+  const [certs, setCerts] = useState<Certificate[] | null>(null);
+
+  useEffect(() => {
+    if (!user?.id) {
+      setCerts([]);
+      return;
     }
-  ];
+
+    let mounted = true;
+    (async () => {
+      try {
+        const rows = await fetchUserCertificates(user.id as string);
+        if (!mounted) return;
+        const mapped: Certificate[] = (rows || []).map((r: UserCertificate) => ({
+          id: r.id || String((r as any).certificate_id || ""),
+          name: r.title || (r as any).name || "",
+          nameBn: r.title_bn || "",
+          date: r.issued_at ? String(r.issued_at).split("T")[0] : "",
+          track: r.track || "",
+          trackBn: r.track_bn || "",
+          score: r.score ?? 0,
+          earned: true
+        }));
+        setCerts(mapped);
+      } catch (err) {
+        console.error("[Certificates] fetch error", err);
+        setCerts([]);
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, [user?.id]);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -53,7 +69,8 @@ export default function CertificatesScreen({ T, t, lang, user }: { T: any; t: an
 
   const handleVerify = () => {
     if (!verifyId.trim()) return;
-    const found = certData.find((x) => x.id.toUpperCase() === verifyId.trim().toUpperCase());
+    const list = certs || [];
+    const found = list.find((x) => x.id.toUpperCase() === verifyId.trim().toUpperCase());
     if (found) {
       setVerificationResult({ status: "success", cert: found });
       showToast(lang === "bn" ? "সার্টিফিকেট সফলভাবে যাচাই করা হয়েছে" : "Certificate verified successfully!");
@@ -64,7 +81,7 @@ export default function CertificatesScreen({ T, t, lang, user }: { T: any; t: an
   };
 
   const copyVerifyLink = (id: string) => {
-    const link = `https://fixeth.ai/verify?id=${id}`;
+    const link = `https://fixeth.vercel.app/verify?id=${id}`;
     navigator.clipboard.writeText(link).then(() => {
       showToast(lang === "bn" ? "যাচাইকরণ লিংক ক্লিপবোর্ডে কপি হয়েছে!" : "Verification URL copied to Clipboard!");
     });
@@ -141,10 +158,13 @@ export default function CertificatesScreen({ T, t, lang, user }: { T: any; t: an
           <div>
             {/* Grid for verified credentials and in progress indicator */}
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16, marginBottom: 28 }}>
-              {certData.map((c) => (
+              {(certs || []).map((c) => (
                 <div
                   key={c.id}
-                  onClick={() => setSelectedCert(c)}
+                  onClick={() => {
+                    if ((c as any).earned) setSelectedCert(c);
+                    else showToast(lang === "bn" ? "এই ভিউটি একটি প্রিভিউ — আপনার অর্জিত সার্টিফিকেট নয়" : "This is a preview — not an earned certificate");
+                  }}
                   style={{
                     background: T.bg1,
                     border: `1.5px solid ${T.border}`,
@@ -169,9 +189,9 @@ export default function CertificatesScreen({ T, t, lang, user }: { T: any; t: an
                 >
                   <div>
                     {/* ID & Date top block */}
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                      <span style={{ fontSize: 9, fontWeight: 900, background: T.accentDim, color: T.accent, padding: "3px 8px", borderRadius: 6, border: `1px solid ${T.accent}33` }}>
-                        ✓ {lang === "bn" ? "যাচাইকৃত" : "VERIFIED"}
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                      <span style={{ fontSize: 9, fontWeight: 900, padding: "3px 8px", borderRadius: 6, border: `1px solid ${T.accent}33`, background: (c as any).earned ? T.accentDim : T.bg2, color: (c as any).earned ? T.accent : T.txt2 }}>
+                        {(c as any).earned ? `✓ ${lang === "bn" ? "যাচাইকৃত" : "VERIFIED"}` : (lang === "bn" ? "প্রিভিউ" : "PREVIEW")}
                       </span>
                       <span style={{ fontSize: 10, color: T.txt2 }}>
                         {c.date}
@@ -190,8 +210,8 @@ export default function CertificatesScreen({ T, t, lang, user }: { T: any; t: an
                     <code style={{ fontSize: 10, color: T.txt1, background: T.bg2, padding: "2px 6px", borderRadius: 4, letterSpacing: "0.2px" }}>
                       {c.id}
                     </code>
-                    <span style={{ fontSize: 11, color: T.accent, fontWeight: 800 }}>
-                      {lang === "bn" ? "সনদ দেখুন" : "View →"}
+                    <span style={{ fontSize: 11, color: (c as any).earned ? T.accent : T.txt2, fontWeight: 800 }}>
+                      {(c as any).earned ? (lang === "bn" ? "সনদ দেখুন" : "View →") : (lang === "bn" ? "প্রিভিউ" : "Preview")}
                     </span>
                   </div>
                 </div>
@@ -297,8 +317,10 @@ export default function CertificatesScreen({ T, t, lang, user }: { T: any; t: an
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: `1px solid ${T.border}`, paddingTop: 10, marginTop: 4 }}>
                       <span style={{ fontSize: 10, color: T.txt2, fontFamily: "monospace" }}>{proj.tech}</span>
                       <button
-                        onClick={() => showToast(lang === "bn" ? "পোর্টফোলিও লিংক স্যান্ডবক্সে লোড হচ্ছে..." : "Loading portfolio workspace sandbox...")}
-                        style={{ background: "none", border: "none", color: T.accent, fontSize: 10.5, fontWeight: 800, cursor: "pointer" }}
+                        disabled
+                        aria-disabled
+                        title={lang === "bn" ? "লাইভ স্যান্ডবক্স শীঘ্রই আসছে" : "Live sandbox demo coming soon"}
+                        style={{ background: "none", border: "none", color: T.txt2, fontSize: 10.5, fontWeight: 800, cursor: "not-allowed", opacity: 0.6 }}
                       >
                         {proj.lbl}
                       </button>
@@ -430,7 +452,7 @@ export default function CertificatesScreen({ T, t, lang, user }: { T: any; t: an
       </div>
 
       {/* LUXURY DIPLOMA BLUEPRINT VIEW MODAL */}
-      {selectedCert && (
+      {selectedCert && (selectedCert as any).earned && (
         <div
           style={{
             position: "fixed",
@@ -474,17 +496,17 @@ export default function CertificatesScreen({ T, t, lang, user }: { T: any; t: an
 
             {/* PREMIUM CERTIFICATE DIPLOMA BOX MATCHING IMAGE SCHEME */}
             <div style={{ padding: "30px 24px" }}>
-              <div
+                <div
                 style={{
-                  background: "#0c0d16",
+                  background: T.bg0,
                   border: `4px double ${T.accent}`,
                   borderRadius: 12,
                   padding: "36px 20px",
                   textAlign: "center",
                   position: "relative",
-                  boxShadow: "inset 0 0 40px rgba(0, 200, 150, 0.15)"
+                  boxShadow: `inset 0 0 40px ${T.accent}22`
                 }}
-              >
+                >
                 {/* Vintage Corners Decor */}
                 <div style={{ position: "absolute", top: 10, left: 10, borderTop: `2px solid ${T.accent}`, borderLeft: `2px solid ${T.accent}`, width: 14, height: 14 }} />
                 <div style={{ position: "absolute", top: 10, right: 10, borderTop: `2px solid ${T.accent}`, borderRight: `2px solid ${T.accent}`, width: 14, height: 14 }} />
@@ -530,15 +552,22 @@ export default function CertificatesScreen({ T, t, lang, user }: { T: any; t: an
 
                 {/* Certificate blockchain ID */}
                 <span style={{ display: "block", fontSize: 9, color: T.txt2, fontFamily: "monospace", marginTop: 24 }}>
-                  Verification Ledger: fixeth.ai/verify?id={selectedCert.id}
+                  Verification Ledger: https://fixeth.vercel.app/verify?id={selectedCert.id}
                 </span>
+
+                <div style={{ marginTop: 12, fontSize: 11, color: T.txt1 }}>
+                  <div style={{ fontWeight: 800, marginBottom: 6 }}>{lang === "bn" ? "টিম" : "Team"}</div>
+                  <div>{lang === "bn" ? "Jawat Al Sovon (leader) • Shafin Ahmed Shoron • Rafsan Jani" : "Jawat Al Sovon (leader) • Shafin Ahmed Shoron • Rafsan Jani"}</div>
+                </div>
               </div>
             </div>
 
             {/* Modal actions footer */}
             <div style={{ background: T.bg2, padding: "14px 20px", display: "flex", justifyContent: "flex-end", gap: 10, borderTop: `1px solid ${T.border}` }}>
               <button
-                onClick={() => showToast(lang === "bn" ? "পিডিএফ লোড হচ্ছে..." : "Compiling vectors for local PDF download...")}
+                disabled
+                aria-disabled
+                title={lang === "bn" ? "PDF ডাউনলোড শীঘ্রই আসছে" : "PDF download coming soon"}
                 style={{
                   background: "transparent",
                   border: `1.5px solid ${T.borderHi}`,
@@ -547,14 +576,17 @@ export default function CertificatesScreen({ T, t, lang, user }: { T: any; t: an
                   padding: "8px 16px",
                   fontSize: 11.5,
                   fontWeight: 800,
-                  cursor: "pointer"
+                  cursor: "not-allowed",
+                  opacity: 0.7
                 }}
               >
                 🖨️ {lang === "bn" ? "ডাউনলোড PDF" : "Download PDF"}
               </button>
 
               <button
-                onClick={() => showToast(lang === "bn" ? "লিংকডইন পাবলিশার লোড হচ্ছে..." : "Connecting to LinkedIn API handler...")}
+                disabled
+                aria-disabled
+                title={lang === "bn" ? "LinkedIn শেয়ার শীঘ্রই আসছে" : "LinkedIn share coming soon"}
                 style={{
                   background: "transparent",
                   border: `1.5px solid ${T.borderHi}`,
@@ -563,7 +595,8 @@ export default function CertificatesScreen({ T, t, lang, user }: { T: any; t: an
                   padding: "8px 16px",
                   fontSize: 11.5,
                   fontWeight: 800,
-                  cursor: "pointer"
+                  cursor: "not-allowed",
+                  opacity: 0.7
                 }}
               >
                 💼 {lang === "bn" ? "LinkedIn এ শেয়ার" : "Share on LinkedIn"}

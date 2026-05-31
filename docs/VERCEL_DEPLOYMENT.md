@@ -175,7 +175,7 @@ vercel logs --tail
 
 In Vercel **Settings → Domains**:
 - Click **"Add Domain"**
-- Enter your domain: `fixeth.com` or `fixeth.ai`
+ - Enter your domain: `fixeth.com` or `fixeth.vercel.app`
 - Follow DNS setup instructions
 
 ### 2. Update Environment

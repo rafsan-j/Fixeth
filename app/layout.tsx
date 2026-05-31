@@ -25,7 +25,7 @@ const dmMono = DM_Mono({
 
 export const metadata: Metadata = {
   title: "Fixeth - Career-Track Learning for Bangladesh",
-  description: "Adaptive LMS with AI-powered video intelligence",
+  description: "Bengali-first adaptive LMS — Learn. Prove. Build.",
 }
 
 export default function RootLayout({

@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { ChatMessage } from "@/types/ui";
 import { useAppTheme } from "@/components/providers/app-theme-provider";
-import { runChat, isAiConfigured, AiNotConfiguredError, type AiPrefs } from "@/lib/ai/byoa";
+import { runChat, isAiConfigured, AiNotConfiguredError, type AiPrefs, getAiPrefsLocal } from "@/lib/ai/byoa";
 
 interface Session {
   id: string;
@@ -174,7 +174,8 @@ export default function AIMentorScreen({
 
     appendToSession({ role: "user", text });
 
-    const prefs = preferences.ai as unknown as AiPrefs;
+    const local = getAiPrefsLocal();
+    const prefs = { ...(preferences.ai as any), ...(local as any) } as AiPrefs;
     if (!isAiConfigured(prefs)) {
       appendToSession({
         role: "ai",
@@ -229,14 +230,14 @@ export default function AIMentorScreen({
   ];
 
   return (
-    <div style={{ display: "flex", flex: 1, minHeight: 0, background: "#0c0e17" }}>
+    <div style={{ display: "flex", flex: 1, minHeight: 0, background: T.bg0 }}>
       
       {/* 1. LEFT SESSIONS SIDEBAR SIDE PANEL */}
       <div
         style={{
           width: 220,
-          background: "#080a11",
-          borderRight: "1px solid #1e2230",
+          background: T.bg2,
+          borderRight: `1px solid ${T.border}`,
           display: "flex",
           flexDirection: "column",
           flexShrink: 0

@@ -15,7 +15,7 @@
 - **Production:** [https://fixeth.vercel.app](https://fixeth.vercel.app) (Vercel project `fixeth`, team `shafin2954s-projects`).
 - Supabase syncs auth user profile, onboarding completion, preferred language, theme, and local preference blobs (editor/AI prefs in `localStorage` + partial DB sync).
 - **Course content in the app UI** still uses static `CORE_MODULES` in `lib/course/constants.ts`. DB tables (`tracks`, `modules`, `lessons`) exist and `/tracks` reads published tracks via `getAllTracks()`, but dashboard/learn flows are not wired to Supabase curriculum yet.
-- BYOA and payment processing are excluded by `AGENTS.md`, even where older metaprompt sections mention them.
+ - BYOA is allowed per `AGENTS.md` — learner API keys must be stored only in browser `localStorage` and never sent to Fixeth servers. Payment processing remains out of scope for now.
 
 ### Frontend merge — done vs not done
 

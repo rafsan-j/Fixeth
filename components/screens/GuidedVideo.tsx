@@ -300,7 +300,7 @@ export default function GuidedVideoScreen({
                 fontSize: 13
               }}
             >
-              {lang === "bn" ? "ভিডিও শীঘ্রই আসছে" : "Video coming soon"}
+              {lang === "bn" ? "ভিডিও উপলব্ধ নেই" : "Video not available"}
             </div>
           )}
 

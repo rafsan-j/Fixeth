@@ -15,6 +15,38 @@ export type AiPrefs = {
   defaultCognitiveLevel?: string;
 };
 
+// Local storage helpers — keys must only live in the user's browser.
+const STORAGE_KEY = "fixeth:ai_prefs";
+
+export function saveAiPrefsLocal(prefs: Partial<AiPrefs>) {
+  try {
+    const prev = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null") || {};
+    const next = { ...prev, ...prefs };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+  } catch (err) {
+    console.warn("Could not save AI prefs to localStorage", err);
+  }
+}
+
+export function getAiPrefsLocal(): Partial<AiPrefs> | null {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as Partial<AiPrefs>;
+  } catch (err) {
+    console.warn("Could not read AI prefs from localStorage", err);
+    return null;
+  }
+}
+
+export function removeAiPrefsLocal() {
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+  } catch (err) {
+    console.warn("Could not remove AI prefs from localStorage", err);
+  }
+}
+
 // Migrate legacy friendly ids that were stored before we used real Google
 // model names. Anything else is assumed to already be a valid Gemini model id.
 const LEGACY_MODEL_MAP: Record<string, string> = {

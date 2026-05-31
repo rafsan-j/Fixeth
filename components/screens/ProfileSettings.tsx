@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import { saveAiPrefsLocal, getAiPrefsLocal, removeAiPrefsLocal } from "@/lib/ai/byoa";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -102,6 +103,13 @@ export default function ProfileSettingsScreen({
 
   useEffect(() => {
     setPrefsDraft(preferences);
+    // Load any locally stored BYOA prefs (do not send to server)
+    try {
+      const local = getAiPrefsLocal();
+      if (local) setPrefsDraft((p) => ({ ...p, ai: { ...(p.ai as any), ...(local as any) } as any }));
+    } catch (e) {
+      // swallow
+    }
   }, [preferences]);
 
   const showToast = (message: string) => {
@@ -117,8 +125,19 @@ export default function ProfileSettingsScreen({
   };
 
   const savePreferences = () => {
-    onSavePreferences(prefsDraft);
+    // When saving preferences, do NOT send the raw API key to the server.
+    const { apiKey, ...aiWithoutKey } = prefsDraft.ai as any;
+    const sanitized = { ...prefsDraft, ai: aiWithoutKey } as typeof prefsDraft;
+    onSavePreferences(sanitized);
+    // Persist key only locally
+    if (prefsDraft.ai?.apiKey) saveAiPrefsLocal({ apiKey: prefsDraft.ai.apiKey });
     showToast(lang === "bn" ? "কাস্টমাইজেশন সেটিংস সেভ করা হয়েছে" : "Customization settings saved");
+  };
+
+  const removeLocalApiKey = () => {
+    removeAiPrefsLocal();
+    setPrefsDraft((p) => ({ ...p, ai: { ...p.ai, apiKey: "" } }));
+    showToast(lang === "bn" ? "লোকাল API কী মুছে ফেলা হয়েছে" : "Local API key removed");
   };
 
   const saveBoth = () => {
@@ -752,7 +771,11 @@ export default function ProfileSettingsScreen({
                 </div>
               </div>
 
-              <div style={{ display: "flex", justifyContent: "flex-end" }}>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+                <button onClick={removeLocalApiKey} type="button" style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "transparent", color: T.txt0, border: `1px solid ${T.border}`, borderRadius: 10, padding: "10px 14px", fontWeight: 900, cursor: "pointer", fontSize: 12 }}>
+                  <Trash2 size={14} />
+                  <span>{lang === "bn" ? "লোকাল API কী মুছুন" : "Remove Local Key"}</span>
+                </button>
                 <button onClick={savePreferences} style={{ display: "inline-flex", alignItems: "center", gap: 8, background: T.accent, color: "#000", border: "none", borderRadius: 10, padding: "10px 16px", fontWeight: 900, cursor: "pointer", fontSize: 12 }}>
                   <Save size={14} />
                   <span>{lang === "bn" ? "এআই মডেল সেভ করুন" : "Save Mentor Settings"}</span>

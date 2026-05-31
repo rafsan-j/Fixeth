@@ -31,6 +31,13 @@ Competition: THE INFINITY AI BUILDFEST 2026 — EdTech track.
 - Store API keys anywhere except .env.local
 - Add payment processing — pricing page is static only
 - Add BYOA — removed from scope
+ - Do NOT
+ - Write business logic inside app/api/ route files
+ - Use any DB other than Supabase
+ - Store API keys anywhere except .env.local
+ - Add payment processing — pricing page is static only
+
+ - BYOA: allowed — BYOA keys may be used by learners but must be stored only in browser localStorage and never sent to Fixeth servers. See `metaprompt.md` for BYOA security guidance and platform fallback details.
 
 ## Docs
 - Full plan: plan.md
