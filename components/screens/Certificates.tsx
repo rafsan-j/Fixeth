@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import CertificatePreview from "@/components/screens/CertificatePreview";
 
 interface Certificate {
   id: string;
@@ -17,7 +16,6 @@ interface Certificate {
 export default function CertificatesScreen({ T, t, lang, user }: { T: any; t: any; lang: string; user?: { id?: string; name?: string } }) {
   const [activeTab, setActiveTab] = useState<"certs" | "verify">("certs");
   const [selectedCert, setSelectedCert] = useState<Certificate | null>(null);
-  const [showPreview, setShowPreview] = useState(false);
   const [loadingCerts, setLoadingCerts] = useState(true);
 
   // States for verification input
@@ -30,7 +28,6 @@ export default function CertificatesScreen({ T, t, lang, user }: { T: any; t: an
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const [certs, setCerts] = useState<Certificate[] | null>(null);
-  const hasEarnedCertificates = (certs || []).some((certificate) => certificate.earned);
 
   useEffect(() => {
     let mounted = true;
@@ -91,6 +88,35 @@ export default function CertificatesScreen({ T, t, lang, user }: { T: any; t: an
     navigator.clipboard.writeText(link).then(() => {
       showToast(lang === "bn" ? "যাচাইকরণ লিংক ক্লিপবোর্ডে কপি হয়েছে!" : "Verification URL copied to Clipboard!");
     });
+  };
+
+  const downloadCertificate = (id: string) => {
+    const url = `/api/certificates/issue?id=${encodeURIComponent(id)}`;
+    window.open(url, "_blank", "noopener,noreferrer");
+    showToast(lang === "bn" ? "সার্টিফিকেট ডাউনলোড শুরু হয়েছে" : "Certificate download started");
+  };
+
+  const shareCertificate = async (cert: Certificate) => {
+    const shareUrl = `https://fixeth.vercel.app/verify?id=${encodeURIComponent(cert.id)}`;
+    const shareText = lang === "bn"
+      ? `${user?.name ?? "আমি"} একটি Fixeth সার্টিফিকেট অর্জন করেছি: ${cert.nameBn || cert.name}`
+      : `${user?.name ?? "I"} earned a Fixeth certificate: ${cert.name || cert.nameBn}`;
+
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: lang === "bn" ? "Fixeth সার্টিফিকেট" : "Fixeth Certificate",
+          text: shareText,
+          url: shareUrl
+        });
+      } else {
+        await navigator.clipboard.writeText(`${shareText} ${shareUrl}`);
+        showToast(lang === "bn" ? "শেয়ার লিংক কপি হয়েছে" : "Share link copied");
+      }
+    } catch (error) {
+      console.error("[Certificates] share failed", error);
+      showToast(lang === "bn" ? "শেয়ার করা যায়নি" : "Unable to share right now");
+    }
   };
 
   return (
@@ -181,20 +207,12 @@ export default function CertificatesScreen({ T, t, lang, user }: { T: any; t: an
               {(certs || []).map((c) => (
                 <div
                   key={c.id}
-                  onClick={() => {
-                    if ((c as any).earned) {
-                      setSelectedCert(c);
-                      setShowPreview(true);
-                    } else {
-                      showToast(lang === "bn" ? "এই ভিউটি একটি প্রিভিউ — আপনার অর্জিত সার্টিফিকেট নয়" : "This is a preview — not an earned certificate");
-                    }
-                  }}
                   style={{
                     background: T.bg1,
                     border: `1.5px solid ${T.border}`,
                     borderRadius: 12,
                     padding: "18px 20px",
-                    cursor: "pointer",
+                    cursor: "default",
                     position: "relative",
                     boxShadow: T.shadow,
                     transition: "all 0.15s ease",
@@ -202,6 +220,7 @@ export default function CertificatesScreen({ T, t, lang, user }: { T: any; t: an
                     flexDirection: "column",
                     justifyContent: "space-between"
                   }}
+                  onClick={() => setSelectedCert(c)}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.borderColor = T.accent;
                     e.currentTarget.style.transform = "translateY(-1px)";
@@ -214,8 +233,8 @@ export default function CertificatesScreen({ T, t, lang, user }: { T: any; t: an
                   <div>
                     {/* ID & Date top block */}
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                      <span style={{ fontSize: 9, fontWeight: 900, padding: "3px 8px", borderRadius: 6, border: `1px solid ${T.accent}33`, background: (c as any).earned ? T.accentDim : T.bg2, color: (c as any).earned ? T.accent : T.txt2 }}>
-                        {(c as any).earned ? `✓ ${lang === "bn" ? "যাচাইকৃত" : "VERIFIED"}` : (lang === "bn" ? "প্রিভিউ" : "PREVIEW")}
+                      <span style={{ fontSize: 9, fontWeight: 900, padding: "3px 8px", borderRadius: 6, border: `1px solid ${T.accent}33`, background: T.accentDim, color: T.accent }}>
+                        ✓ {lang === "bn" ? "যাচাইকৃত" : "VERIFIED"}
                       </span>
                       <span style={{ fontSize: 10, color: T.txt2 }}>
                         {c.date}
@@ -234,46 +253,172 @@ export default function CertificatesScreen({ T, t, lang, user }: { T: any; t: an
                     <code style={{ fontSize: 10, color: T.txt1, background: T.bg2, padding: "2px 6px", borderRadius: 4, letterSpacing: "0.2px" }}>
                       {c.id}
                     </code>
-                    <span style={{ fontSize: 11, color: (c as any).earned ? T.accent : T.txt2, fontWeight: 800 }}>
-                      {(c as any).earned ? (lang === "bn" ? "সনদ দেখুন" : "View →") : (lang === "bn" ? "প্রিভিউ" : "Preview")}
-                    </span>
+                    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                      <button
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setSelectedCert(c);
+                        }}
+                        style={{
+                          background: T.bg2,
+                          color: T.txt0,
+                          border: `1px solid ${T.border}`,
+                          borderRadius: 7,
+                          padding: "7px 10px",
+                          fontSize: 10.5,
+                          fontWeight: 800,
+                          cursor: "pointer"
+                        }}
+                      >
+                        {lang === "bn" ? "দেখুন" : "View"}
+                      </button>
+                      <button
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          downloadCertificate(c.id);
+                        }}
+                        style={{
+                          background: T.accent,
+                          color: "#000",
+                          border: "none",
+                          borderRadius: 7,
+                          padding: "7px 10px",
+                          fontSize: 10.5,
+                          fontWeight: 900,
+                          cursor: "pointer"
+                        }}
+                      >
+                        {lang === "bn" ? "ডাউনলোড" : "Download"}
+                      </button>
+                      <button
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          void shareCertificate(c);
+                        }}
+                        style={{
+                          background: T.bg2,
+                          color: T.txt0,
+                          border: `1px solid ${T.border}`,
+                          borderRadius: 7,
+                          padding: "7px 10px",
+                          fontSize: 10.5,
+                          fontWeight: 800,
+                          cursor: "pointer"
+                        }}
+                      >
+                        {lang === "bn" ? "শেয়ার" : "Share"}
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
+            </div>
 
-              {showPreview && selectedCert && (
-                <CertificatePreview cert={selectedCert} user={user} onClose={() => setShowPreview(false)} />
-              )}
-
-              {!hasEarnedCertificates ? (
+            {selectedCert ? (
+              <div
+                style={{
+                  position: "fixed",
+                  inset: 0,
+                  zIndex: 1000,
+                  background: "rgba(0,0,0,0.8)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  padding: 16
+                }}
+                onClick={() => setSelectedCert(null)}
+              >
                 <div
                   style={{
+                    width: "min(760px, 100%)",
                     background: T.bg1,
-                    border: `1.5px dashed ${T.borderHi}`,
-                    borderRadius: 12,
-                    padding: "18px 20px",
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    textAlign: "center"
+                    border: `1px solid ${T.borderHi}`,
+                    borderRadius: 16,
+                    overflow: "hidden",
+                    boxShadow: "0 24px 60px rgba(0,0,0,0.45)"
                   }}
+                  onClick={(event) => event.stopPropagation()}
                 >
-                  <div style={{ fontSize: 26, marginBottom: 8, animation: "bounce 2s infinite" }}>⏳</div>
-                  <h3 style={{ fontSize: 12.5, fontWeight: 800, color: T.txt0, margin: "0 0 2px" }}>
-                    {lang === "bn" ? "পরবর্তী সার্টিফিকেট প্রক্রিয়াকরণে" : "Next Certificate in Progress"}
-                  </h3>
-                  <p style={{ fontSize: 10.5, color: T.txt1, margin: "0 0 12px" }}>
-                    {lang === "bn" ? "প্যান্ডাস লাইব্রেরি ডিপ ডাইভ • ৬০% সম্পন্ন" : "Pandas Deep Dive • 60% Complete"}
-                  </p>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 18px", borderBottom: `1px solid ${T.border}`, background: T.bg2 }}>
+                    <div>
+                      <div style={{ fontSize: 11, color: T.txt2, fontWeight: 800 }}>{lang === "bn" ? "সনদ প্রিভিউ" : "Certificate Preview"}</div>
+                      <div style={{ fontSize: 14, fontWeight: 900, color: T.txt0 }}>{selectedCert.nameBn || selectedCert.name}</div>
+                    </div>
+                    <button
+                      onClick={() => setSelectedCert(null)}
+                      style={{ background: "none", border: "none", color: T.txt1, cursor: "pointer", fontSize: 18 }}
+                      aria-label="Close preview"
+                    >
+                      ✕
+                    </button>
+                  </div>
 
-                  {/* Simulated Animated Progress Bar */}
-                  <div style={{ width: "100%", background: T.bg2, height: 6, borderRadius: 3, overflow: "hidden" }}>
-                    <div style={{ width: "60%", background: `linear-gradient(90deg, ${T.purple}, ${T.accent})`, height: "100%", borderRadius: 3 }} />
+                  <div style={{ padding: 20 }}>
+                    <div style={{ background: T.bg0, border: `3px double ${T.accent}`, borderRadius: 14, padding: 32, textAlign: "center", position: "relative" }}>
+                      <h2 style={{ fontFamily: "Georgia, serif", fontSize: 26, fontStyle: "italic", margin: "0 0 6px", color: T.accent, letterSpacing: "1px" }}>
+                        Fixeth
+                      </h2>
+                      <div style={{ fontSize: 9, fontWeight: 900, textTransform: "uppercase", letterSpacing: "2px", color: T.txt1, display: "block", marginBottom: 20 }}>
+                        {lang === "bn" ? "সাফল্যের সনদপত্র" : "Certificate of Completion"}
+                      </div>
+                      <div style={{ fontSize: 11, color: T.txt1, marginBottom: 8 }}>
+                        {lang === "bn" ? "গর্বের সাথে প্রদান করা হচ্ছে:" : "THIS OFFICIAL CREDENTIAL PROVES THAT"}
+                      </div>
+                      <div style={{ fontSize: 22, fontWeight: 950, color: "#fff", fontFamily: "'DM Sans', sans-serif", letterSpacing: "-0.5px", margin: "10px 0" }}>
+                        {user?.name ?? "John Doe"}
+                      </div>
+                      <div style={{ fontSize: 11, color: T.txt1, marginBottom: 12 }}>
+                        {lang === "bn" ? "সফলতার সাথে কোর্স সম্পন্ন করেছেন" : "has successfully fulfilled educational requirements & assessment modules for"}
+                      </div>
+                      <div style={{ fontSize: 17, fontWeight: 800, color: T.accent, margin: "10px 0" }}>
+                        {lang === "bn" ? selectedCert.nameBn : selectedCert.name}
+                      </div>
+                      <div style={{ fontSize: 10, color: T.txt2, marginBottom: 28 }}>
+                        {lang === "bn" ? `মূল্যায়ন স্কোর: ${selectedCert.score}% • ট্র্যাক: ${selectedCert.trackBn}` : `Track Focus: ${selectedCert.track} • Placement Standings: ${selectedCert.score}%`}
+                      </div>
+                      <div style={{ display: "flex", justifyContent: "space-around", gap: 16, marginTop: 20, borderTop: `1px solid ${T.border}`, paddingTop: 16 }}>
+                        <div>
+                          <span style={{ fontSize: 12, fontFamily: "Georgia, serif", fontStyle: "italic", color: "#fff", display: "block" }}>Jawat Al Sovon</span>
+                          <span style={{ fontSize: 8.5, color: T.txt1, display: "block", marginTop: 2 }}>{lang === "bn" ? "সাইনিং অথরিটি" : "Signing Authority"}</span>
+                        </div>
+                        <div>
+                          <span style={{ fontSize: 12, fontFamily: "Georgia, serif", fontStyle: "italic", color: "#fff", display: "block" }}>Shafin Ahmed Shoron</span>
+                          <span style={{ fontSize: 8.5, color: T.txt1, display: "block", marginTop: 2 }}>{lang === "bn" ? "যাচাইকরণ" : "Validation"}</span>
+                        </div>
+                        <div>
+                          <span style={{ fontSize: 12, fontFamily: "Georgia, serif", fontStyle: "italic", color: "#fff", display: "block" }}>Rafsan Jani</span>
+                          <span style={{ fontSize: 8.5, color: T.txt1, display: "block", marginTop: 2 }}>{lang === "bn" ? "ইস্যু" : "Issuance"}</span>
+                        </div>
+                      </div>
+                      <span style={{ display: "block", fontSize: 9, color: T.txt2, fontFamily: "monospace", marginTop: 18 }}>
+                        Verification Ledger: https://fixeth.vercel.app/verify?id={selectedCert.id}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div style={{ background: T.bg2, padding: "14px 18px", display: "flex", justifyContent: "flex-end", gap: 10, borderTop: `1px solid ${T.border}` }}>
+                    <button
+                      onClick={() => downloadCertificate(selectedCert.id)}
+                      style={{ background: T.accent, color: "#000", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 11.5, fontWeight: 900, cursor: "pointer" }}
+                    >
+                      🖨️ {lang === "bn" ? "ডাউনলোড PDF" : "Download PDF"}
+                    </button>
+                    <button
+                      onClick={() => void shareCertificate(selectedCert)}
+                      style={{ background: "transparent", border: `1.5px solid ${T.borderHi}`, color: T.txt0, borderRadius: 8, padding: "8px 16px", fontSize: 11.5, fontWeight: 800, cursor: "pointer" }}
+                    >
+                      💼 {lang === "bn" ? "শেয়ার করুন" : "Share"}
+                    </button>
+                    <button
+                      onClick={() => copyVerifyLink(selectedCert.id)}
+                      style={{ background: T.bg2, color: T.txt0, border: `1px solid ${T.border}`, borderRadius: 8, padding: "8px 18px", fontSize: 11.5, fontWeight: 900, cursor: "pointer" }}
+                    >
+                      🔗 {lang === "bn" ? "যাচাইকরণ লিংক কপি" : "Copy verification link"}
+                    </button>
                   </div>
                 </div>
-              ) : null}
-            </div>
+              </div>
+            ) : null}
 
             {/* PORTFOLIO PROJECTS PANEL */}
             <div
@@ -479,178 +624,6 @@ export default function CertificatesScreen({ T, t, lang, user }: { T: any; t: an
           </div>
         )}
       </div>
-
-      {/* LUXURY DIPLOMA BLUEPRINT VIEW MODAL */}
-      {selectedCert && (selectedCert as any).earned && (
-        <div
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            width: "100%",
-            height: "100%",
-            background: "rgba(0,0,0,0.85)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: 16,
-            zIndex: 1000
-          }}
-        >
-          <div
-            style={{
-              background: T.bg1,
-              border: `1.5px solid ${T.borderHi}`,
-              borderRadius: 14,
-              maxWidth: 640,
-              width: "100%",
-              overflow: "hidden",
-              boxShadow: "0 12px 36px rgba(0,0,0,0.6)",
-              display: "flex",
-              flexDirection: "column"
-            }}
-          >
-            {/* Upper dialog header */}
-            <div style={{ background: T.bg2, padding: "12px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: `1px solid ${T.border}` }}>
-              <span style={{ fontSize: 11.5, fontWeight: 800, color: T.txt1 }}>
-                🎓 {lang === "bn" ? "আউটপুট প্রিভিউ" : "Official Certificate Showcase View"}
-              </span>
-              <button
-                onClick={() => setSelectedCert(null)}
-                style={{ background: "none", border: "none", color: T.txt1, cursor: "pointer", fontSize: 16 }}
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* PREMIUM CERTIFICATE DIPLOMA BOX MATCHING IMAGE SCHEME */}
-            <div style={{ padding: "30px 24px" }}>
-                <div
-                style={{
-                  background: T.bg0,
-                  border: `4px double ${T.accent}`,
-                  borderRadius: 12,
-                  padding: "36px 20px",
-                  textAlign: "center",
-                  position: "relative",
-                  boxShadow: `inset 0 0 40px ${T.accent}22`
-                }}
-                >
-                {/* Vintage Corners Decor */}
-                <div style={{ position: "absolute", top: 10, left: 10, borderTop: `2px solid ${T.accent}`, borderLeft: `2px solid ${T.accent}`, width: 14, height: 14 }} />
-                <div style={{ position: "absolute", top: 10, right: 10, borderTop: `2px solid ${T.accent}`, borderRight: `2px solid ${T.accent}`, width: 14, height: 14 }} />
-                <div style={{ position: "absolute", bottom: 10, left: 10, borderBottom: `2px solid ${T.accent}`, borderLeft: `2px solid ${T.accent}`, width: 14, height: 14 }} />
-                <div style={{ position: "absolute", bottom: 10, right: 10, borderBottom: `2px solid ${T.accent}`, borderRight: `2px solid ${T.accent}`, width: 14, height: 14 }} />
-
-                <h2 style={{ fontFamily: "Georgia, serif", fontSize: 24, fontStyle: "italic", margin: "0 0 4px", color: T.accent, letterSpacing: "1px" }}>
-                  Fixeth
-                </h2>
-                <div style={{ fontSize: 9, fontWeight: 900, textTransform: "uppercase", letterSpacing: "2px", color: T.txt1, display: "block", marginBottom: 20 }}>
-                  {lang === "bn" ? "সাফল্যের সনদপত্র" : "Certificate of Completion"}
-                </div>
-
-                <div style={{ fontSize: 11, color: T.txt1, marginBottom: 8 }}>
-                  {lang === "bn" ? "গর্বের সাথে প্রদান করা হচ্ছে:" : "THIS OFficiAL CREDENTIAL PROVES THAT"}
-                </div>
-                <div style={{ fontSize: 22, fontWeight: 950, color: "#fff", fontFamily: "'DM Sans', sans-serif", letterSpacing: "-0.5px", margin: "10px 0" }}>
-                  {user?.name ?? "John Doe"}
-                </div>
-                <div style={{ fontSize: 11, color: T.txt1, marginBottom: 12 }}>
-                  {lang === "bn" ? "সফলতার সাথে কোর্স সম্পন্ন করেছেন" : "has successfully fulfilled educational requirements & assessment modules for"}
-                </div>
-
-                <div style={{ fontSize: 17, fontWeight: 800, color: T.accent, margin: "10px 0" }}>
-                  {lang === "bn" ? selectedCert.nameBn : selectedCert.name}
-                </div>
-
-                <div style={{ fontSize: 10, color: T.txt2, marginBottom: 28 }}>
-                  {lang === "bn" ? `মূল্যায়ন স্কোর: ${selectedCert.score}% • ট্র্যাক: ${selectedCert.trackBn}` : `Track Focus: ${selectedCert.track} • Placement Standings: ${selectedCert.score}%`}
-                </div>
-
-                {/* Team sign-off side-by-side */}
-                <div style={{ display: "flex", justifyContent: "space-around", gap: 16, marginTop: 20, borderTop: `1px solid ${T.border}`, paddingTop: 16 }}>
-                  <div>
-                    <span style={{ fontSize: 12, fontFamily: "Georgia, serif", fontStyle: "italic", color: "#fff", display: "block" }}>Jawat Al Sovon</span>
-                    <span style={{ fontSize: 8.5, color: T.txt1, display: "block", marginTop: 2 }}>{lang === "bn" ? "সাইনিং অথরিটি, ফিক্সেথ" : "Signing Authority, Fixeth"}</span>
-                  </div>
-                  <div>
-                    <span style={{ fontSize: 12, fontFamily: "monospace", color: "#fff", display: "block" }}>{selectedCert.date}</span>
-                    <span style={{ fontSize: 8.5, color: T.txt1, display: "block", marginTop: 2 }}>{lang === "bn" ? "যাচাইকৃত ইস্যু তারিখ" : "Verified Issuance Date"}</span>
-                  </div>
-                </div>
-
-                {/* Certificate blockchain ID */}
-                <span style={{ display: "block", fontSize: 9, color: T.txt2, fontFamily: "monospace", marginTop: 24 }}>
-                  Verification Ledger: https://fixeth.vercel.app/verify?id={selectedCert.id}
-                </span>
-
-                <div style={{ marginTop: 12, fontSize: 11, color: T.txt1 }}>
-                  <div style={{ fontWeight: 800, marginBottom: 6 }}>{lang === "bn" ? "টিম" : "Team"}</div>
-                  <div>{lang === "bn" ? "Jawat Al Sovon • Shafin Ahmed Shoron • Rafsan Jani" : "Jawat Al Sovon • Shafin Ahmed Shoron • Rafsan Jani"}</div>
-                  <div style={{ marginTop: 4, fontSize: 10, color: T.txt2 }}>{lang === "bn" ? "টিমের সদস্যরা সনদ যাচাই ও সাইন অফ করেন" : "Team members sign and validate the credential"}</div>
-                </div>
-              </div>
-            </div>
-
-            {/* Modal actions footer */}
-            <div style={{ background: T.bg2, padding: "14px 20px", display: "flex", justifyContent: "flex-end", gap: 10, borderTop: `1px solid ${T.border}` }}>
-              <button
-                disabled
-                aria-disabled
-                title={lang === "bn" ? "PDF ডাউনলোড শীঘ্রই আসছে" : "PDF download coming soon"}
-                style={{
-                  background: "transparent",
-                  border: `1.5px solid ${T.borderHi}`,
-                  color: T.txt0,
-                  borderRadius: 8,
-                  padding: "8px 16px",
-                  fontSize: 11.5,
-                  fontWeight: 800,
-                  cursor: "not-allowed",
-                  opacity: 0.7
-                }}
-              >
-                🖨️ {lang === "bn" ? "ডাউনলোড PDF" : "Download PDF"}
-              </button>
-
-              <button
-                disabled
-                aria-disabled
-                title={lang === "bn" ? "LinkedIn শেয়ার শীঘ্রই আসছে" : "LinkedIn share coming soon"}
-                style={{
-                  background: "transparent",
-                  border: `1.5px solid ${T.borderHi}`,
-                  color: T.txt0,
-                  borderRadius: 8,
-                  padding: "8px 16px",
-                  fontSize: 11.5,
-                  fontWeight: 800,
-                  cursor: "not-allowed",
-                  opacity: 0.7
-                }}
-              >
-                💼 {lang === "bn" ? "LinkedIn এ শেয়ার" : "Share on LinkedIn"}
-              </button>
-
-              <button
-                onClick={() => copyVerifyLink(selectedCert.id)}
-                style={{
-                  background: T.accent,
-                  color: "#000",
-                  border: "none",
-                  borderRadius: 8,
-                  padding: "8px 18px",
-                  fontSize: 11.5,
-                  fontWeight: 900,
-                  cursor: "pointer"
-                }}
-              >
-                🔗 {lang === "bn" ? "কপি যাচাইকরণ লিংক" : "Copy Verification link"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* INTERACTIVE TOAST */}
       {toastMessage && (

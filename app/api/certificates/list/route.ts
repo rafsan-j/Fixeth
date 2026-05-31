@@ -40,6 +40,7 @@ export async function GET(req: Request) {
         track_id: trackId || null,
         enrollment_id: enrollmentId || null,
         cert_hash,
+        issued_at: (enrollment as any)?.completed_at ?? new Date().toISOString(),
         score: null,
         grade: null,
         pdf_url: null

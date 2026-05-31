@@ -22,9 +22,10 @@ export async function issueCertificate(options: {
   enrollmentId?: string;
   score?: number;
   grade?: string;
+  issuedAt?: string;
 }): Promise<IssuedCertificate | null> {
   const supabase = createClient();
-  const { userId, trackId, enrollmentId, score, grade } = options;
+  const { userId, trackId, enrollmentId, score, grade, issuedAt } = options;
 
   try {
     // If a certificate already exists for this enrollment, return it.
@@ -58,6 +59,7 @@ export async function issueCertificate(options: {
       track_id: trackId ?? null,
       enrollment_id: enrollmentId ?? null,
       cert_hash,
+      issued_at: issuedAt ?? new Date().toISOString(),
       score: score ?? null,
       grade: grade ?? null,
       pdf_url: null

@@ -63,8 +63,23 @@ export async function updateEnrollmentProgress(
         .limit(1)
         .maybeSingle();
 
+      const { data: latestProgress } = await supabase
+        .from("progress")
+        .select("completed_at")
+        .eq("user_id", userId)
+        .eq("completed", true)
+        .not("completed_at", "is", null)
+        .order("completed_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
       const enrollmentId = (enrollment as any)?.id ?? null;
-      await issueCertificate({ userId, trackId, enrollmentId });
+      await issueCertificate({
+        userId,
+        trackId,
+        enrollmentId,
+        issuedAt: (latestProgress as any)?.completed_at ?? new Date().toISOString()
+      });
     }
   } catch (err) {
     console.error("[updateEnrollmentProgress.issue]", (err as any).message || err);
