@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/client";
 import type { Enrollment } from "@/types";
+import { issueCertificate } from "@/lib/certificates/issue";
 
 export async function createEnrollment(
   userId: string,
@@ -49,4 +50,23 @@ export async function updateEnrollmentProgress(
     .eq("track_id", trackId);
 
   if (error) console.error("[updateEnrollmentProgress]", error.message);
+
+  // If the user reached 100% progress, ensure a certificate is issued.
+  try {
+    if (Math.round(Number(payload.progress_percent) as number) >= 100) {
+      // Try to find enrollment id if not provided via payload
+      const { data: enrollment } = await supabase
+        .from("enrollments")
+        .select("id")
+        .eq("user_id", userId)
+        .eq("track_id", trackId)
+        .limit(1)
+        .maybeSingle();
+
+      const enrollmentId = (enrollment as any)?.id ?? null;
+      await issueCertificate({ userId, trackId, enrollmentId });
+    }
+  } catch (err) {
+    console.error("[updateEnrollmentProgress.issue]", (err as any).message || err);
+  }
 }

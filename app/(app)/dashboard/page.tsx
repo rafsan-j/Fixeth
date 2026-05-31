@@ -64,7 +64,7 @@ export default function DashboardPage() {
       weeklyGoal={preferences.weeklyGoal}
       dashboardStats={dashboardStats}
       dashboardAnalytics={dashboardAnalytics}
-      streak={profileRow?.streak ?? dashboardStats?.streak ?? 0}
+      streak={dashboardStats?.streak ?? profileRow?.streak ?? 0}
       loading={loading}
       onContinue={() => router.push(continueHref)}
       onStartAssessment={() => router.push("/onboarding")}

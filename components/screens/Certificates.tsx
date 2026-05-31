@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { fetchUserCertificates, UserCertificate } from "@/lib/supabase/queries/certificates";
+import CertificatePreview from "@/components/screens/CertificatePreview";
 
 interface Certificate {
   id: string;
@@ -17,6 +17,8 @@ interface Certificate {
 export default function CertificatesScreen({ T, t, lang, user }: { T: any; t: any; lang: string; user?: { id?: string; name?: string } }) {
   const [activeTab, setActiveTab] = useState<"certs" | "verify">("certs");
   const [selectedCert, setSelectedCert] = useState<Certificate | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
+  const [loadingCerts, setLoadingCerts] = useState(true);
 
   // States for verification input
   const [verifyId, setVerifyId] = useState("SH-2026-A4F7B2");
@@ -28,39 +30,43 @@ export default function CertificatesScreen({ T, t, lang, user }: { T: any; t: an
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const [certs, setCerts] = useState<Certificate[] | null>(null);
+  const hasEarnedCertificates = (certs || []).some((certificate) => certificate.earned);
 
   useEffect(() => {
-    if (!user?.id) {
-      setCerts([]);
-      return;
-    }
-
     let mounted = true;
     (async () => {
       try {
-        const rows = await fetchUserCertificates(user.id as string);
+        setLoadingCerts(true);
+        const res = await fetch("/api/certificates/list");
         if (!mounted) return;
-        const mapped: Certificate[] = (rows || []).map((r: UserCertificate) => ({
-          id: r.id || String((r as any).certificate_id || ""),
-          name: r.title || (r as any).name || "",
-          nameBn: r.title_bn || "",
+        if (!res.ok) {
+          throw new Error(`certificate list failed (${res.status})`);
+        }
+        const json = await res.json();
+        const rows = (json?.data || []) as Array<Record<string, any>>;
+        const mapped: Certificate[] = (rows || []).map((r) => ({
+          id: String(r.id || r.cert_hash || r.certificate_id || ""),
+          name: String(r.title || r.name || "Certificate"),
+          nameBn: String(r.title_bn || ""),
           date: r.issued_at ? String(r.issued_at).split("T")[0] : "",
-          track: r.track || "",
-          trackBn: r.track_bn || "",
-          score: r.score ?? 0,
+          track: String(r.track?.title_en || r.track_name || r.track || r.track_id || ""),
+          trackBn: String(r.track_bn || ""),
+          score: Number(r.score ?? 0),
           earned: true
         }));
         setCerts(mapped);
       } catch (err) {
         console.error("[Certificates] fetch error", err);
         setCerts([]);
+      } finally {
+        if (mounted) setLoadingCerts(false);
       }
     })();
 
     return () => {
       mounted = false;
     };
-  }, [user?.id]);
+  }, []);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -158,12 +164,30 @@ export default function CertificatesScreen({ T, t, lang, user }: { T: any; t: an
           <div>
             {/* Grid for verified credentials and in progress indicator */}
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16, marginBottom: 28 }}>
+              {loadingCerts ? (
+                <div style={{ gridColumn: "1 / -1", padding: 18, border: `1px solid ${T.border}`, borderRadius: 12, background: T.bg1, color: T.txt1 }}>
+                  {lang === "bn" ? "সার্টিফিকেট লোড হচ্ছে..." : "Loading certificates..."}
+                </div>
+              ) : null}
+
+              {!loadingCerts && (certs || []).length === 0 ? (
+                <div style={{ gridColumn: "1 / -1", padding: 18, border: `1px solid ${T.border}`, borderRadius: 12, background: T.bg1, color: T.txt1 }}>
+                  {lang === "bn"
+                    ? "এখনও কোনো সার্টিফিকেট পাওয়া যায়নি। একটি কোর্স ১০০% শেষ হলে এটি এখানে দেখা যাবে।"
+                    : "No certificates yet. Finish a course to 100% and it will appear here."}
+                </div>
+              ) : null}
+
               {(certs || []).map((c) => (
                 <div
                   key={c.id}
                   onClick={() => {
-                    if ((c as any).earned) setSelectedCert(c);
-                    else showToast(lang === "bn" ? "এই ভিউটি একটি প্রিভিউ — আপনার অর্জিত সার্টিফিকেট নয়" : "This is a preview — not an earned certificate");
+                    if ((c as any).earned) {
+                      setSelectedCert(c);
+                      setShowPreview(true);
+                    } else {
+                      showToast(lang === "bn" ? "এই ভিউটি একটি প্রিভিউ — আপনার অর্জিত সার্টিফিকেট নয়" : "This is a preview — not an earned certificate");
+                    }
                   }}
                   style={{
                     background: T.bg1,
@@ -217,33 +241,38 @@ export default function CertificatesScreen({ T, t, lang, user }: { T: any; t: an
                 </div>
               ))}
 
-              {/* Progress Tracker Card resembling preview */}
-              <div
-                style={{
-                  background: T.bg1,
-                  border: `1.5px dashed ${T.borderHi}`,
-                  borderRadius: 12,
-                  padding: "18px 20px",
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  textAlign: "center"
-                }}
-              >
-                <div style={{ fontSize: 26, marginBottom: 8, animation: "bounce 2s infinite" }}>⏳</div>
-                <h3 style={{ fontSize: 12.5, fontWeight: 800, color: T.txt0, margin: "0 0 2px" }}>
-                  {lang === "bn" ? "পরবর্তী সার্টিফিকেট প্রক্রিয়াকরণে" : "Next Certificate in Progress"}
-                </h3>
-                <p style={{ fontSize: 10.5, color: T.txt1, margin: "0 0 12px" }}>
-                  {lang === "bn" ? "প্যান্ডাস লাইব্রেরি ডিপ ডাইভ • ৬০% সম্পন্ন" : "Pandas Deep Dive • 60% Complete"}
-                </p>
+              {showPreview && selectedCert && (
+                <CertificatePreview cert={selectedCert} user={user} onClose={() => setShowPreview(false)} />
+              )}
 
-                {/* Simulated Animated Progress Bar */}
-                <div style={{ width: "100%", background: T.bg2, height: 6, borderRadius: 3, overflow: "hidden" }}>
-                  <div style={{ width: "60%", background: `linear-gradient(90deg, ${T.purple}, ${T.accent})`, height: "100%", borderRadius: 3 }} />
+              {!hasEarnedCertificates ? (
+                <div
+                  style={{
+                    background: T.bg1,
+                    border: `1.5px dashed ${T.borderHi}`,
+                    borderRadius: 12,
+                    padding: "18px 20px",
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    textAlign: "center"
+                  }}
+                >
+                  <div style={{ fontSize: 26, marginBottom: 8, animation: "bounce 2s infinite" }}>⏳</div>
+                  <h3 style={{ fontSize: 12.5, fontWeight: 800, color: T.txt0, margin: "0 0 2px" }}>
+                    {lang === "bn" ? "পরবর্তী সার্টিফিকেট প্রক্রিয়াকরণে" : "Next Certificate in Progress"}
+                  </h3>
+                  <p style={{ fontSize: 10.5, color: T.txt1, margin: "0 0 12px" }}>
+                    {lang === "bn" ? "প্যান্ডাস লাইব্রেরি ডিপ ডাইভ • ৬০% সম্পন্ন" : "Pandas Deep Dive • 60% Complete"}
+                  </p>
+
+                  {/* Simulated Animated Progress Bar */}
+                  <div style={{ width: "100%", background: T.bg2, height: 6, borderRadius: 3, overflow: "hidden" }}>
+                    <div style={{ width: "60%", background: `linear-gradient(90deg, ${T.purple}, ${T.accent})`, height: "100%", borderRadius: 3 }} />
+                  </div>
                 </div>
-              </div>
+              ) : null}
             </div>
 
             {/* PORTFOLIO PROJECTS PANEL */}
@@ -538,15 +567,15 @@ export default function CertificatesScreen({ T, t, lang, user }: { T: any; t: an
                   {lang === "bn" ? `মূল্যায়ন স্কোর: ${selectedCert.score}% • ট্র্যাক: ${selectedCert.trackBn}` : `Track Focus: ${selectedCert.track} • Placement Standings: ${selectedCert.score}%`}
                 </div>
 
-                {/* Directors signatures side-by-side */}
+                {/* Team sign-off side-by-side */}
                 <div style={{ display: "flex", justifyContent: "space-around", gap: 16, marginTop: 20, borderTop: `1px solid ${T.border}`, paddingTop: 16 }}>
                   <div>
-                    <span style={{ fontSize: 12, fontFamily: "Georgia, serif", fontStyle: "italic", color: "#fff", display: "block" }}>Dr. R. Khan</span>
-                    <span style={{ fontSize: 8.5, color: T.txt1, display: "block", marginTop: 2 }}>{lang === "bn" ? "পরিচালক, ফিক্সেথ একাডেমি" : "Director, Fixeth Academy"}</span>
+                    <span style={{ fontSize: 12, fontFamily: "Georgia, serif", fontStyle: "italic", color: "#fff", display: "block" }}>Jawat Al Sovon</span>
+                    <span style={{ fontSize: 8.5, color: T.txt1, display: "block", marginTop: 2 }}>{lang === "bn" ? "সাইনিং অথরিটি, ফিক্সেথ" : "Signing Authority, Fixeth"}</span>
                   </div>
                   <div>
                     <span style={{ fontSize: 12, fontFamily: "monospace", color: "#fff", display: "block" }}>{selectedCert.date}</span>
-                    <span style={{ fontSize: 8.5, color: T.txt1, display: "block", marginTop: 2 }}>{lang === "bn" ? "সনদ প্রদানের তারিখ" : "Official Issuance Date"}</span>
+                    <span style={{ fontSize: 8.5, color: T.txt1, display: "block", marginTop: 2 }}>{lang === "bn" ? "যাচাইকৃত ইস্যু তারিখ" : "Verified Issuance Date"}</span>
                   </div>
                 </div>
 
@@ -557,7 +586,8 @@ export default function CertificatesScreen({ T, t, lang, user }: { T: any; t: an
 
                 <div style={{ marginTop: 12, fontSize: 11, color: T.txt1 }}>
                   <div style={{ fontWeight: 800, marginBottom: 6 }}>{lang === "bn" ? "টিম" : "Team"}</div>
-                  <div>{lang === "bn" ? "Jawat Al Sovon (leader) • Shafin Ahmed Shoron • Rafsan Jani" : "Jawat Al Sovon (leader) • Shafin Ahmed Shoron • Rafsan Jani"}</div>
+                  <div>{lang === "bn" ? "Jawat Al Sovon • Shafin Ahmed Shoron • Rafsan Jani" : "Jawat Al Sovon • Shafin Ahmed Shoron • Rafsan Jani"}</div>
+                  <div style={{ marginTop: 4, fontSize: 10, color: T.txt2 }}>{lang === "bn" ? "টিমের সদস্যরা সনদ যাচাই ও সাইন অফ করেন" : "Team members sign and validate the credential"}</div>
                 </div>
               </div>
             </div>

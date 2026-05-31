@@ -51,6 +51,24 @@ function buildDateRangeKeys(days: number): string[] {
   return keys;
 }
 
+function computeActivityStreak(dailyCompletions: { date: string; completedLessons: number }[]): number {
+  let lastActiveIndex = -1;
+  for (let index = dailyCompletions.length - 1; index >= 0; index -= 1) {
+    if ((dailyCompletions[index]?.completedLessons ?? 0) > 0) {
+      lastActiveIndex = index;
+      break;
+    }
+  }
+  if (lastActiveIndex < 0) return 0;
+
+  let streak = 0;
+  for (let index = lastActiveIndex; index >= 0; index -= 1) {
+    if ((dailyCompletions[index]?.completedLessons ?? 0) <= 0) break;
+    streak += 1;
+  }
+  return streak;
+}
+
 type CourseContextValue = {
   modules: Module[];
   loading: boolean;
@@ -175,15 +193,6 @@ export function CourseProvider({ children }: { children: React.ReactNode }) {
         ? enrollment.track.title_bn
         : enrollment.track?.title_en || "Your track";
 
-    setDashboardStats({
-      progressPercent: Number(enrollment.progress_percent) || 0,
-      lessonsCompleted: completed.length,
-      totalLessons,
-      streak: profileRow?.streak ?? 0,
-      trackTitle,
-      currentLessonId: enrollment.current_lesson_id ?? null
-    });
-
     const dateKeys = buildDateRangeKeys(DASHBOARD_RANGE_DAYS);
     const sinceDate = new Date();
     sinceDate.setHours(0, 0, 0, 0);
@@ -218,6 +227,16 @@ export function CourseProvider({ children }: { children: React.ReactNode }) {
       date,
       completedLessons: countsByDate.get(date) ?? 0
     }));
+    const activityStreak = computeActivityStreak(dailyCompletions);
+
+    setDashboardStats({
+      progressPercent: Number(enrollment.progress_percent) || 0,
+      lessonsCompleted: completed.length,
+      totalLessons,
+      streak: activityStreak,
+      trackTitle,
+      currentLessonId: enrollment.current_lesson_id ?? null
+    });
 
     const completedSet = new Set(completed);
     const moduleCompletions = curriculum.map((module) => {

@@ -44,6 +44,9 @@ const DEFAULT_THEME: LoadingCanvasTheme = {
   txt2: "#7D7D97"
 };
 
+import { themes } from "@/lib/ui/themes";
+import { useEffect, useState } from "react";
+
 export default function LoadingCanvas({
   variant = "dashboard",
   theme = DEFAULT_THEME,
@@ -53,7 +56,27 @@ export default function LoadingCanvas({
   theme?: Partial<LoadingCanvasTheme>;
   showTopBar?: boolean;
 }) {
-  const T = { ...DEFAULT_THEME, ...theme };
+  const [clientT, setClientT] = useState<LoadingCanvasTheme | null>(null);
+
+  useEffect(() => {
+    try {
+      const isDark = typeof window !== "undefined" && localStorage.getItem("fixeth.isDark") === "true";
+      const rawPrefs = typeof window !== "undefined" ? localStorage.getItem("fixeth.userPreferences") : null;
+      let accent = DEFAULT_THEME.accent;
+      if (rawPrefs) {
+        try {
+          const parsed = JSON.parse(rawPrefs || "{}");
+          accent = parsed?.accentColor || parsed?.accent || accent;
+        } catch {}
+      }
+      const base = themes[isDark ? "dark" : "light"] as any;
+      setClientT({ ...(DEFAULT_THEME as any), ...(base || {}), accent });
+    } catch (err) {
+      // ignore and keep defaults
+    }
+  }, []);
+
+  const T = { ...(clientT ?? DEFAULT_THEME), ...theme } as LoadingCanvasTheme;
   const shimmer = `linear-gradient(90deg, ${T.bg2} 0%, ${T.bg3} 50%, ${T.bg2} 100%)`;
 
   return (
