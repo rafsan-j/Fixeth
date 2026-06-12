@@ -1,6 +1,8 @@
 "use client";
-import AIMentorScreen from "@/components/screens/AIMentor";
+import dynamic from "next/dynamic";
 import { useAppTheme } from "@/components/providers/app-theme-provider";
+
+const AIMentorScreen = dynamic(() => import("@/components/screens/AIMentor"), { ssr: false });
 import { useCourse } from "@/components/providers/course-provider";
 
 export default function MentorPage() {

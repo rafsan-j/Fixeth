@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { motion } from "framer-motion";
 import { Clock, Languages, TrendingUp, GitBranch, ArrowRight, Play } from "lucide-react";
 import { usePublicPrefs } from "@/components/public/public-lang";
 
@@ -46,7 +45,7 @@ const COPY = {
     statSignals: "Job sources tracked",
     bottomTitle: "Thirty seconds to start.",
     bottomSub: "Google sign-in. No credit card. Bengali-first from the first screen.",
-    bottomCta: "Sign up free"
+    bottomCta: "Sign up"
   },
   bn: {
     heroEyebrow: "বাংলাদেশের জন্য AI-নেটিভ শিক্ষা",
@@ -99,11 +98,6 @@ const FEATURE_ICONS = {
   graph: GitBranch
 } as const;
 
-const fadeUp = {
-  hidden: { opacity: 0, y: 24 },
-  visible: { opacity: 1, y: 0 }
-};
-
 export default function LandingPage() {
   const { lang } = usePublicPrefs();
   const c = COPY[lang];
@@ -112,27 +106,20 @@ export default function LandingPage() {
     <div>
       {/* ── Hero ─────────────────────────────────────────────── */}
       <section className="relative overflow-hidden">
-        {/* Soft accent glow */}
         <div className="pointer-events-none absolute -top-32 left-1/2 h-96 w-[640px] -translate-x-1/2 rounded-full bg-[#00C896]/15 blur-3xl" />
 
         <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 pb-16 pt-14 lg:grid-cols-2 lg:gap-14 lg:pb-24 lg:pt-20">
-          <motion.div
-            initial="hidden"
-            animate="visible"
-            transition={{ staggerChildren: 0.12 }}
-          >
-            <motion.div
-              variants={fadeUp}
-              transition={{ duration: 0.5 }}
+          <div>
+            <div
+              style={{ animation: "fixeth-fade-up 0.5s ease both" }}
               className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#00C896]/30 bg-[#00C896]/10 px-3.5 py-1.5 text-xs font-bold text-[#00A87E] dark:text-[#00C896]"
             >
               <span className="size-1.5 rounded-full bg-[#00C896]" />
               {c.heroEyebrow}
-            </motion.div>
+            </div>
 
-            <motion.h1
-              variants={fadeUp}
-              transition={{ duration: 0.5 }}
+            <h1
+              style={{ animation: "fixeth-fade-up 0.5s ease both 0.12s" }}
               className="text-4xl font-black leading-[1.08] tracking-tight sm:text-5xl lg:text-6xl"
             >
               {c.heroTitle1}
@@ -140,19 +127,17 @@ export default function LandingPage() {
               <span className="bg-gradient-to-r from-[#00C896] to-[#3AA0FF] bg-clip-text text-transparent">
                 {c.heroTitle2}
               </span>
-            </motion.h1>
+            </h1>
 
-            <motion.p
-              variants={fadeUp}
-              transition={{ duration: 0.5 }}
+            <p
+              style={{ animation: "fixeth-fade-up 0.5s ease both 0.24s" }}
               className="mt-5 max-w-xl text-base leading-relaxed text-neutral-600 dark:text-neutral-300 sm:text-lg"
             >
               {c.heroSub}
-            </motion.p>
+            </p>
 
-            <motion.div
-              variants={fadeUp}
-              transition={{ duration: 0.5 }}
+            <div
+              style={{ animation: "fixeth-fade-up 0.5s ease both 0.36s" }}
               className="mt-8 flex flex-col gap-3 sm:flex-row"
             >
               <Link
@@ -168,12 +153,10 @@ export default function LandingPage() {
               >
                 {c.ctaSecondary}
               </Link>
-            </motion.div>
+            </div>
 
-            {/* Stats strip */}
-            <motion.div
-              variants={fadeUp}
-              transition={{ duration: 0.5 }}
+            <div
+              style={{ animation: "fixeth-fade-up 0.5s ease both 0.48s" }}
               className="mt-10 flex gap-8"
             >
               {[
@@ -186,41 +169,36 @@ export default function LandingPage() {
                   <div className="mt-0.5 text-xs text-neutral-500 dark:text-neutral-400">{label}</div>
                 </div>
               ))}
-            </motion.div>
-          </motion.div>
+            </div>
+          </div>
 
-          {/* Hero visual: AI chat finds the timestamp and the video seeks */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 24 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.25 }}
+          {/* Hero visual */}
+          <div
+            style={{ animation: "fixeth-scale-in 0.6s ease both 0.25s" }}
             className="relative mx-auto w-full max-w-md"
           >
             <div className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-2xl dark:border-neutral-800 dark:bg-[#13131A]">
               {/* Mock video frame */}
               <div className="relative flex aspect-video items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-neutral-800 to-neutral-900">
-                <motion.div
-                  animate={{ scale: [1, 1.08, 1] }}
-                  transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
+                <div
+                  style={{ animation: "fixeth-pulse-play 2.4s ease-in-out infinite" }}
                   className="flex size-14 items-center justify-center rounded-full bg-[#00C896]"
                 >
                   <Play size={22} className="ml-0.5 text-black" fill="currentColor" />
-                </motion.div>
-                {/* Seek bar with animated playhead jump */}
+                </div>
+                {/* Seek bar */}
                 <div className="absolute inset-x-3 bottom-3">
                   <div className="relative h-1.5 rounded-full bg-white/20">
-                    <motion.div
+                    <div
                       className="h-full rounded-full bg-[#00C896]"
-                      animate={{ width: ["18%", "18%", "72%", "72%"] }}
-                      transition={{ duration: 5, times: [0, 0.5, 0.62, 1], repeat: Infinity }}
+                      style={{ animation: "fixeth-seekbar 5s linear infinite" }}
                     />
-                    <motion.div
+                    <div
                       className="absolute -top-7 rounded-md bg-[#F5A623] px-1.5 py-0.5 font-mono text-[10px] font-black text-black"
-                      animate={{ left: ["18%", "18%", "68%", "68%"], opacity: [0, 0, 1, 1] }}
-                      transition={{ duration: 5, times: [0, 0.5, 0.62, 1], repeat: Infinity }}
+                      style={{ animation: "fixeth-timestamp-pos 5s linear infinite" }}
                     >
                       14:32
-                    </motion.div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -230,59 +208,45 @@ export default function LandingPage() {
                 <div className="self-end rounded-2xl rounded-br-md bg-[#00C896] px-3.5 py-2 text-sm font-semibold text-black">
                   {c.chatQuestion}
                 </div>
-                <motion.div
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.9, duration: 0.4 }}
+                <div
+                  style={{ animation: "fixeth-fade-in-up 0.4s ease both 0.9s" }}
                   className="self-start rounded-2xl rounded-bl-md bg-neutral-100 px-3.5 py-2 text-sm leading-relaxed text-neutral-800 dark:bg-[#22222E] dark:text-neutral-200"
                 >
                   {c.chatAnswerPre}
-                  <motion.button
-                    animate={{ scale: [1, 1.06, 1] }}
-                    transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
-                    className="mx-0.5 inline-flex cursor-pointer items-center gap-1 rounded-md border border-[#F5A623]/40 bg-[#F5A623]/15 px-1.5 py-0.5 font-mono text-xs font-black text-[#C07000] dark:text-[#F5A623]"
+                  <span
+                    style={{ display: "inline-flex", animation: "fixeth-pulse-small 1.6s ease-in-out infinite" }}
+                    className="mx-0.5 cursor-pointer items-center gap-1 rounded-md border border-[#F5A623]/40 bg-[#F5A623]/15 px-1.5 py-0.5 font-mono text-xs font-black text-[#C07000] dark:text-[#F5A623]"
                   >
                     ⏱ 14:32
-                  </motion.button>
+                  </span>
                   {c.chatAnswerPost}
-                </motion.div>
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 1.6, duration: 0.4 }}
+                </div>
+                <div
+                  style={{ animation: "fixeth-fade-in 0.4s ease both 1.6s" }}
                   className="self-start text-xs font-bold text-[#00A87E] dark:text-[#00C896]"
                 >
                   ▶ {c.seekLabel}
-                </motion.div>
+                </div>
               </div>
             </div>
-          </motion.div>
+          </div>
         </div>
       </section>
 
       {/* ── Feature cards ───────────────────────────────────── */}
       <section className="border-t border-neutral-200 bg-neutral-50 dark:border-neutral-800 dark:bg-[#0F0F16]">
         <div className="mx-auto max-w-6xl px-4 py-16 lg:py-20">
-          <motion.h2
-            initial={{ opacity: 0, y: 16 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "-80px" }}
-            transition={{ duration: 0.5 }}
-            className="text-center text-2xl font-black tracking-tight sm:text-3xl"
-          >
+          <h2 className="text-center text-2xl font-black tracking-tight sm:text-3xl">
             {c.featuresTitle}
-          </motion.h2>
+          </h2>
 
           <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {c.features.map((feature, idx) => {
               const Icon = FEATURE_ICONS[feature.icon as keyof typeof FEATURE_ICONS];
               return (
-                <motion.div
+                <div
                   key={feature.title}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true, margin: "-60px" }}
-                  transition={{ duration: 0.45, delay: idx * 0.08 }}
+                  style={{ animation: `fixeth-fade-up 0.45s ease both ${idx * 0.08}s` }}
                   className="rounded-2xl border border-neutral-200 bg-white p-5 dark:border-neutral-800 dark:bg-[#13131A]"
                 >
                   <div className="mb-3.5 flex size-10 items-center justify-center rounded-xl bg-[#00C896]/12 text-[#00A87E] dark:text-[#00C896]">
@@ -292,7 +256,7 @@ export default function LandingPage() {
                   <p className="mt-2 text-sm leading-relaxed text-neutral-600 dark:text-neutral-400">
                     {feature.body}
                   </p>
-                </motion.div>
+                </div>
               );
             })}
           </div>
@@ -301,24 +265,17 @@ export default function LandingPage() {
 
       {/* ── Bottom CTA ──────────────────────────────────────── */}
       <section className="mx-auto max-w-6xl px-4 py-16 text-center lg:py-24">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-60px" }}
-          transition={{ duration: 0.5 }}
+        <h2 className="text-3xl font-black tracking-tight sm:text-4xl">{c.bottomTitle}</h2>
+        <p className="mx-auto mt-3 max-w-md text-base text-neutral-600 dark:text-neutral-400">
+          {c.bottomSub}
+        </p>
+        <Link
+          href="/signup"
+          className="mt-8 inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#00C896] px-8 py-3 text-base font-extrabold text-black no-underline shadow-[0_8px_30px_rgba(0,200,150,0.35)] transition-transform hover:-translate-y-0.5"
         >
-          <h2 className="text-3xl font-black tracking-tight sm:text-4xl">{c.bottomTitle}</h2>
-          <p className="mx-auto mt-3 max-w-md text-base text-neutral-600 dark:text-neutral-400">
-            {c.bottomSub}
-          </p>
-          <Link
-            href="/signup"
-            className="mt-8 inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#00C896] px-8 py-3 text-base font-extrabold text-black no-underline shadow-[0_8px_30px_rgba(0,200,150,0.35)] transition-transform hover:-translate-y-0.5"
-          >
-            {c.bottomCta}
-            <ArrowRight size={18} />
-          </Link>
-        </motion.div>
+          {c.bottomCta}
+          <ArrowRight size={18} />
+        </Link>
       </section>
     </div>
   );

@@ -6,8 +6,8 @@ import { Moon, Sun } from "lucide-react";
 import { usePublicPrefs } from "@/components/public/public-lang";
 
 const NAV_COPY = {
-  en: { home: "Home", about: "About", login: "Log in", signup: "Sign up free" },
-  bn: { home: "হোম", about: "আমাদের কথা", login: "লগ ইন", signup: "ফ্রি সাইন আপ" }
+  en: { home: "Home", about: "About", login: "Log in", signup: "Sign up" },
+  bn: { home: "হোম", about: "আমাদের কথা", login: "লগ ইন", signup: "সাইন আপ" }
 };
 
 const FOOTER_COPY = {
@@ -15,7 +15,7 @@ const FOOTER_COPY = {
     tagline: "Career-track learning for Bangladesh. Learn. Prove. Build.",
     product: "Product",
     company: "Company",
-    rights: "All rights reserved."
+  rights: "All rights reserved."
   },
   bn: {
     tagline: "বাংলাদেশের জন্য ক্যারিয়ার-ট্র্যাক শিক্ষা। শিখুন। প্রমাণ করুন। গড়ুন।",

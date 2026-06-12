@@ -111,6 +111,9 @@ export function CourseProvider({ children }: { children: React.ReactNode }) {
   const refreshCurriculum = useCallback(async () => {
     setLoading(true);
 
+    // Start completed IDs fetch immediately — it doesn't depend on enrollment.
+    const completedPromise = fetchCompletedLessonIdsClient(authUser.id);
+
     // Resolution order: the lesson currently in the URL wins; otherwise keep the
     // track the learner was last viewing (persisted) so navigating to a
     // tier-less route like /codespace doesn't switch tracks/tiers; finally fall
@@ -138,7 +141,7 @@ export function CourseProvider({ children }: { children: React.ReactNode }) {
       enrollment = await fetchActiveEnrollmentClient(authUser.id);
     }
 
-    const completed = await fetchCompletedLessonIdsClient(authUser.id);
+    const completed = await completedPromise;
     setCompletedIds(completed);
 
     if (!enrollment?.track_id) {
@@ -158,11 +161,18 @@ export function CourseProvider({ children }: { children: React.ReactNode }) {
     setActiveTrackTier(
       normalizeUiTier(enrollment.track?.tier ?? 1)
     );
-    const curriculum = await fetchCurriculumForTrack(
-      enrollment.track_id,
-      completed,
-      lang
-    );
+
+    const dateKeys = buildDateRangeKeys(DASHBOARD_RANGE_DAYS);
+    const sinceDate = new Date();
+    sinceDate.setHours(0, 0, 0, 0);
+    sinceDate.setDate(sinceDate.getDate() - (DASHBOARD_RANGE_DAYS - 1));
+
+    // Fetch curriculum and progress data in parallel.
+    const [curriculum, progressRows] = await Promise.all([
+      fetchCurriculumForTrack(enrollment.track_id, completed, lang),
+      fetchCompletedProgressInRangeClient(authUser.id, sinceDate.toISOString()),
+    ]);
+
     setModules(curriculum);
 
     const firstOpen: Record<string, boolean> = {};
@@ -183,16 +193,6 @@ export function CourseProvider({ children }: { children: React.ReactNode }) {
       trackTitle,
       currentLessonId: enrollment.current_lesson_id ?? null
     });
-
-    const dateKeys = buildDateRangeKeys(DASHBOARD_RANGE_DAYS);
-    const sinceDate = new Date();
-    sinceDate.setHours(0, 0, 0, 0);
-    sinceDate.setDate(sinceDate.getDate() - (DASHBOARD_RANGE_DAYS - 1));
-
-    const progressRows = await fetchCompletedProgressInRangeClient(
-      authUser.id,
-      sinceDate.toISOString()
-    );
 
     const lessonMeta = new Map<string, { lessonTitle: string; moduleTitle: string }>();
     curriculum.forEach((module) => {
